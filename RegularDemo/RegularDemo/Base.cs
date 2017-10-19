@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -9,6 +10,31 @@ namespace RegularDemo
 {
     class Base
     {
+        public static string GetUrltoHtml(string Url, string type = "UTF-8")
+        {
+            try
+            {
+                System.Net.WebRequest wReq = System.Net.WebRequest.Create(Url);
+                // Get the response instance.
+                System.Net.WebResponse wResp = wReq.GetResponse();
+                System.IO.Stream respStream = wResp.GetResponseStream();
+                // Dim reader As StreamReader = New StreamReader(respStream)
+                using (System.IO.StreamReader reader = new System.IO.StreamReader(respStream, Encoding.GetEncoding(type)))
+                {
+                    return reader.ReadToEnd();
+                }
+            }
+            catch (System.Exception ex)
+            {
+                //errorMsg = ex.Message;
+            }
+            return "";
+        }
+
+        public static string GetText(string fileName)
+        {
+            return File.OpenText(AppDomain.CurrentDomain.BaseDirectory + "../../" + fileName).ReadToEnd();
+        }
 
         public static void Run()
         {
@@ -123,18 +149,18 @@ namespace RegularDemo
 
             #region 嵌套标签
 
-            string content = Program.GetUrltoHtml("http://www.cnblogs.com/deerchao/archive/2006/08/24/zhengzhe30fengzhongjiaocheng.html");
+            string content = GetUrltoHtml("http://www.cnblogs.com/deerchao/archive/2006/08/24/zhengzhe30fengzhongjiaocheng.html");
 
 
             string s1 = @"(?'Open'\w)\k<Open>";
 
-            string ress = new Regex(s1, RegexOptions.IgnoreCase).Match("ddddx").Value;
+            string ress = new Regex(s1, RegexOptions.IgnoreCase).Match("xddddx").Value;
 
 
             s1 = @"\(((?'Open'\()|(?'-Open'\))|[^()])*(?(Open)(?!))\)";
 
 
-            ress = new Regex(s1, RegexOptions.IgnoreCase).Match("1(2(3(4)5)6)7)8").Value;
+            ress = new Regex(s1, RegexOptions.IgnoreCase).Match("(1(2(3(4)5)6)7)8)").Value;
 
 
             s1 = @"<td\s*id=""td2""[^>]*>((?><td[^>]*>(?<o>)|</td>(?<-o>)|[\s\S])*)(?(o)(?!))</td>";
@@ -157,11 +183,11 @@ namespace RegularDemo
 
             var res = r.Match("xx <aa <bbb> <bbb> aa> yy>").Value;//<aa <bbb> <bbb> aa>
 
-            regg = "<div[^>]*>[^<>]*(((?'Open'<div[^>]*>)[^<>]*)+((?'-Open'</div>)[^<>]*)+)*(?(Open)(?!))</div>";
+            regg = "<div[^>]*>[^< >]*(((?'Open'<div[^>]*>)[^<>]*)+((?'-Open'</div>)[^<>]*)+)*(?(Open)(?!))</div>";
 
             r = new Regex(regg, RegexOptions.IgnoreCase);
 
-            res = r.Match("<a href=\"http://www.baidu.com\"></a><div id=\"div1\">1</div>2</div><p></p>").Value;//<div id="div1"><div id="div2">你在他乡还好吗？</div></div>
+            res = r.Match("<a href=\"http://www.baidu.com\"></a><div id=\"div1\">1<p>p1</p><div><p>p2</p>2</div></div>").Value;//<div id="div1"><div id="div2">你在他乡还好吗？</div></div>
 
 
             #endregion

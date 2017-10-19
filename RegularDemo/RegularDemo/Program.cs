@@ -10,36 +10,14 @@ namespace RegularDemo
 {
     class Program
     {
-        public static string GetUrltoHtml(string Url, string type = "UTF-8")
-        {
-            try
-            {
-                System.Net.WebRequest wReq = System.Net.WebRequest.Create(Url);
-                // Get the response instance.
-                System.Net.WebResponse wResp = wReq.GetResponse();
-                System.IO.Stream respStream = wResp.GetResponseStream();
-                // Dim reader As StreamReader = New StreamReader(respStream)
-                using (System.IO.StreamReader reader = new System.IO.StreamReader(respStream, Encoding.GetEncoding(type)))
-                {
-                    return reader.ReadToEnd();
-                }
-            }
-            catch (System.Exception ex)
-            {
-                //errorMsg = ex.Message;
-            }
-            return "";
-        }
 
-        public static string GetText(string fileName)
-        {
-            return File.OpenText(AppDomain.CurrentDomain.BaseDirectory + "../../" + fileName).ReadToEnd();
-        }
         static void Main(string[] args)
         {
 
-            string content = GetUrltoHtml("http://www.cnblogs.com/youring2/p/3836259.html");
-            string txtContent = GetText("data.html");
+            Base.Run();
+
+            string content = Base.GetUrltoHtml("http://www.cnblogs.com/youring2/p/3836259.html");
+            string txtContent = Base.GetText("data.html");
 
             //匹配任意闭合HTML标签的正则表达式：
             string pattern = @"<(?<HtmlTag>[\w]+)[^>]*?>((?<Nested><\k<HtmlTag>[^>]*>)|</\k<HtmlTag>>(?<-Nested>)|.*?)*</\k<HtmlTag>>";
