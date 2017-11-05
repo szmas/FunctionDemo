@@ -1,0 +1,12 @@
+﻿@using MyBlogs.Models
+@model List<Students>
+@{
+    ViewBag.Title = "Index";
+}
+
+<h2>Index</h2>
+
+@foreach (var item in Model.Take(10))
+{
+    <p>@item.ID &nbsp;&nbsp;&nbsp; @item.Name</p>
+}
