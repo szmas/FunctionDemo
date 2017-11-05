@@ -1,0 +1,175 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title></title>
+</head>
+<body>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        在我上一篇《<a href="http://undefined" style="margin: 0px; padding: 0px; color: rgb(0, 0, 0);">前端安全之XSS攻击</a>》文中，并没有把XSS攻击的解决办法说完整，而XSS的攻击又那么五花八门，有没有一招“独孤九剑”能够抗衡，毕竟那么多情况场景，开发人员无法一一照顾过来，而今天通过阅读《白帽子讲Web安全》这本书，对应对方式有了更好的总结，分为两类，一是服务端可以干的事，二是客户端可以干的事。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <span style="margin: 0px; padding: 0px; font-size: 14pt;"><strong style="margin: 0px; padding: 0px;"><span style="margin: 0px; padding: 0px; color: rgb(0, 0, 255);">前提</span></strong></span>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        在说XSS解决方式时，有一个前提。就是同源策略——浏览器的同源策略（浏览器安全的基础，即使是攻击脚本也要遵守这法则），限制了来自不同源的“document”或脚本，对当前“document”读取或设置某些属性。除了DOM、Cookie、XMLHttpRequest会受到同源策略的限制外，浏览器加载的一些第三方插件也有各自的同源策略。不过script、img、iframe、link等标签都可以跨域加载资源，而不受同源策略的限制。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <span style="margin: 0px; padding: 0px; font-size: 14pt;"><strong style="margin: 0px; padding: 0px;"><span style="margin: 0px; padding: 0px; color: rgb(0, 0, 255);">服务端可以干的事</span></strong></span>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <strong style="margin: 0px; padding: 0px;"><span style="margin: 0px; padding: 0px; color: rgb(255, 102, 0);">1. HttpOnly</span></strong>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        其实就是现在HTTP协议（HTTPS也是可以的）才能读取cookies，JavaScript是读取不到cookies的。支持浏览器是IE6+、Firefox2+、Google、Safari4+。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        JavaEE给Cookie添加HttpOnly的代码：
+    </p>
+    <div class="cnblogs_code" style="margin: 5px 0px; padding: 5px; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); overflow: auto; white-space: normal; font-family: &quot;Courier New&quot; !important; font-size: 12px !important;">
+        <pre style="margin-top: 0px; margin-bottom: 0px; padding: 0px; white-space: pre-wrap; word-wrap: break-word; font-family: &quot;Courier New&quot; !important;">response.setHeader(&quot;Set-Cookie&quot;,&quot;cookiename=value; Path=/;Domain=domainvalue;Max-Age=seconds;HTTPOnly&quot;);</pre>
+    </div>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        PS：对于HTTPS，还是可以设置Secure字段，对Cookie进行安全加密。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        这是本质上不是预防XSS，而是在被攻破时候不允许JS读取Cookie。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <strong style="margin: 0px; padding: 0px;"><span style="margin: 0px; padding: 0px; color: rgb(255, 102, 0);">2.处理富文本</span></strong>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        有些数据因为使用场景问题，并不能直接在服务端进行转义存储。不过富文本数据语义是完整的HTML代码，在输出时也不会拼凑到某个标签的属性中，所以可以当特殊情况特殊处理。处理的过程是在服务端配置富文本标签和属性的白名单，不允许出现其他标签或属性（例如script、iframe、form等），即”XSS Filter“。然后在存储之前进行过滤（过滤原理没有去探明）。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        Java有个开源项目Anti-Samy是非常好的XSS Filter：
+    </p>
+    <div class="cnblogs_code" style="margin: 5px 0px; padding: 5px; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); overflow: auto; white-space: normal; font-family: &quot;Courier New&quot; !important; font-size: 12px !important;">
+        <pre style="margin-top: 0px; margin-bottom: 0px; padding: 0px; white-space: pre-wrap; word-wrap: break-word; font-family: &quot;Courier New&quot; !important;">Policy ploicy = Policy.getInstance(POLICY_FILE_LOCATION);
+AntiSamy as = new AntiSamy();
+CleanResults cr = as.scan(dirtyInput, policy);
+MyUserDao.storeUserProfile(cr.getCleanHTML());</pre>
+    </div>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        PS：当然也可以在前端显示前过滤，但是我觉得，让前端人员少做东西好，并且服务端只需要转一次。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <span style="margin: 0px; padding: 0px; font-size: 14pt;"><strong style="margin: 0px; padding: 0px;"><span style="margin: 0px; padding: 0px; color: rgb(0, 0, 255);">客户端可以干的事</span></strong></span>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <strong style="margin: 0px; padding: 0px;"><span style="margin: 0px; padding: 0px; color: rgb(255, 102, 0);">1.&nbsp;输入检查</span></strong>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        输入检查的逻辑，必须放在服务器端代码中实现（因为用JavaScript做输入检查，很容易被攻击者绕过）。目前Web开发的普遍做法，是同时在客户端JavaScript中和服务器代码中实现相同的输入检查。客户端JavaScript的输入检查，可以阻挡大部分误操作的正常用户，从而节约服务资源。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        PS：简单说，就是输入检查，服务端和客户端都要做。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        另外攻击者可能输入XSS的地方，例如：
+    </p>
+    <div class="cnblogs_code" style="margin: 5px 0px; padding: 5px; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); overflow: auto; white-space: normal; font-family: &quot;Courier New&quot; !important; font-size: 12px !important;">
+        <div class="cnblogs_code_toolbar" style="margin: 5px 0px 0px; padding: 0px;">
+            <span class="cnblogs_code_copy" style="margin: 0px; padding: 0px 5px 0px 0px; line-height: 1.5 !important;"><a title="复制代码" style="margin: 0px; padding: 0px; text-decoration-line: underline; border: none !important;" href="http://undefined"><img src="http://common.cnblogs.com/images/copycode.gif" alt="复制代码" style="margin: 0px; padding: 0px; max-width: 800px; border: none !important;" /></a></span>
+        </div>
+        <pre style="margin-top: 0px; margin-bottom: 0px; padding: 0px; white-space: pre-wrap; word-wrap: break-word; font-family: &quot;Courier New&quot; !important;">1.页面中所有的input框
+2.window.location（href、hash等）
+3.window.name
+4.document.referrer
+5.document.cookie
+6.localstorage
+7.XMLHttpRequest返回的数据</pre>
+        <div class="cnblogs_code_toolbar" style="margin: 5px 0px 0px; padding: 0px;">
+            <span class="cnblogs_code_copy" style="margin: 0px; padding: 0px 5px 0px 0px; line-height: 1.5 !important;"><a title="复制代码" style="margin: 0px; padding: 0px; text-decoration-line: underline; border: none !important;" href="http://undefined"><img src="http://common.cnblogs.com/images/copycode.gif" alt="复制代码" style="margin: 0px; padding: 0px; max-width: 800px; border: none !important;" /></a></span>
+        </div>
+    </div>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        PS：当然不止这些
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <strong style="margin: 0px; padding: 0px;"><span style="margin: 0px; padding: 0px; color: rgb(255, 102, 0);">2. 输出检查</span></strong>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        一般就是在变量输出到HTML页面时，使用编码或转义的方式来防御XSS攻击。XSS的本质就是“HTML注入”，用户的数据被当成了HTML代码一部分来执行，从而混淆了原本的语义，产生了新的语义。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <strong style="margin: 0px; padding: 0px;">触发XSS的地方</strong>
+    </p>
+    <div class="cnblogs_code" style="margin: 5px 0px; padding: 5px; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); overflow: auto; white-space: normal; font-family: &quot;Courier New&quot; !important; font-size: 12px !important;">
+        <div class="cnblogs_code_toolbar" style="margin: 5px 0px 0px; padding: 0px;">
+            <span class="cnblogs_code_copy" style="margin: 0px; padding: 0px 5px 0px 0px; line-height: 1.5 !important;"><a title="复制代码" style="margin: 0px; padding: 0px; text-decoration-line: underline; border: none !important;" href="http://undefined"><img src="http://common.cnblogs.com/images/copycode.gif" alt="复制代码" style="margin: 0px; padding: 0px; max-width: 800px; border: none !important;" /></a></span>
+        </div>
+        <pre style="margin-top: 0px; margin-bottom: 0px; padding: 0px; white-space: pre-wrap; word-wrap: break-word; font-family: &quot;Courier New&quot; !important;">1.document.write
+2.xxx.innerHTML=
+3.xxx.outerHTML=
+4.innerHTML.replace
+5.document.attachEvent
+6.window.attachEvent
+7.document.location.replace
+8.document.location.assign</pre>
+        <div class="cnblogs_code_toolbar" style="margin: 5px 0px 0px; padding: 0px;">
+            <span class="cnblogs_code_copy" style="margin: 0px; padding: 0px 5px 0px 0px; line-height: 1.5 !important;"><a title="复制代码" style="margin: 0px; padding: 0px; text-decoration-line: underline; border: none !important;" href="http://undefined"><img src="http://common.cnblogs.com/images/copycode.gif" alt="复制代码" style="margin: 0px; padding: 0px; max-width: 800px; border: none !important;" /></a></span>
+        </div>
+    </div>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        PS：如果使用jquery，就是那些append、html、before、after等，其实就是拼接变量到HTML页面时产生。大部分的MVC框架在模板（view层）会自动处理XSS问题，例如AngularJS。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <strong style="margin: 0px; padding: 0px;">用什么编码转义</strong>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        主要有HTMLEncode和JavaScriptEncode这两个，客户端和服务端都能做。但是让后端去做，我感觉是不大靠谱的，因为数据的使用场景可能有几种，可以在标签、属性、或脚本里（甚至其他终端使用），单单以一种方式去encode是很极限的。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        1.HTMLEncode，就是将字符转换成HTMLEntities，一般会转（&amp;、&lt;、&gt;、&quot;、&#39;、/）这6个字符。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        2.JavaScriptEncode，是使用”\“对特殊字符进行转义。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        PS：我在《<a href="http://undefined" style="margin: 0px; padding: 0px; color: rgb(0, 0, 0);">HtmlEncode和JavaScriptEncode（预防XSS）</a>》一文总结了比较完整的HTMLEncode和JavaScriptEncode两个前端函数的写法，以及一点示例。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <strong style="margin: 0px; padding: 0px;">哪些地方需要编转义</strong>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        1.在HTML标签、属性中输出——用HTMLEncode
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        2.在script标签中输出——用JavaScriptEncode
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        3.在事件中输出——用JavaScriptEncode
+    </p>
+    <div class="cnblogs_code" style="margin: 5px 0px; padding: 5px; background-color: rgb(245, 245, 245); border: 1px solid rgb(204, 204, 204); overflow: auto; white-space: normal; font-family: &quot;Courier New&quot; !important; font-size: 12px !important;">
+        <pre style="margin-top: 0px; margin-bottom: 0px; padding: 0px; white-space: pre-wrap; word-wrap: break-word; font-family: &quot;Courier New&quot; !important;">&lt;a href=&quot;#&quot; onclick=&quot;funcA(&#39;$var&#39;)&quot;&gt;test&lt;/a&gt;</pre>
+    </div>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        4.在CSS中输出
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        用类似JavaScriptEncode的方式。将除了字母、数字外的所有字符都编码成十六进制形式”\uHH“。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        5.在地址中输出
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        一般如果变量是整个URL，则先检查变量是否以“http”开头（不是则帮忙添加http），保证不会出现伪协议类的XSS攻击。然后再对变量进行URLEncode。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        PS：URLEncode会将字符转换成”%HH“形式。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        <span style="margin: 0px; padding: 0px; font-size: 14pt;"><strong style="margin: 0px; padding: 0px;"><span style="margin: 0px; padding: 0px; color: rgb(0, 0, 255);">总结</span></strong></span>
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        前端开发人员要注意在正确的地方使用正确的编码方式，有时为了防御XSS，在一个地方我们需要联合HTMLEncode、JavaScriptEncode进行编码，甚至是叠加，并不是固定一种方式编码（又是具体情况具体分析）。
+    </p>
+    <p style="margin: 10px auto; padding: 0px; color: rgb(51, 51, 51); font-family: Verdana, Arial, Helvetica, sans-serif; font-size: 14px; white-space: normal;">
+        一般存储型XSS风险高于反射型XSS。反射型XSS一般要求攻击者诱使用户点击一个包含XSS代码的URL链接；而存储型只需要用户查看一个正常的URL链接，当用户打开页面时，XSS Payload就会被执行。这样漏洞极其隐蔽，且埋伏在用户的正常业务中，风险很高。（引自白帽子讲Web安全原文）
+    </p>
+    <p>
+        <br />
+    </p>
+</body>
+</html>

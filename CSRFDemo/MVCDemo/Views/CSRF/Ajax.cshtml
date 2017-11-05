@@ -1,0 +1,43 @@
+﻿@{
+    ViewBag.Title = "Ajax";
+}
+
+<h2>Ajax</h2>
+<p>
+    ajax提交的时候，在headers上添加请求头X-CSRF-TOKEN
+    后台验证token
+</p>
+<div>
+    用户名：<input type="text" name="username" /><br />
+    金额：<input type="text" name="money" /><br />
+    <input type="submit" value="转账" />
+</div>
+@Html.AntiForgeryToken();
+<script src="http://libs.baidu.com/jquery/1.9.1/jquery.min.js"></script>
+<script>
+    $(function () {
+        $.ajax({
+            type: 'post',
+            url: '/CSRF/Ajax_Post',
+            data: { username: 'mas', money: 1000 },
+            dataType: 'json',
+            contentType: 'application/x-www-form-urlencoded',
+            //一个额外的"{键:值}"对映射到请求一起发送。
+            headers: {
+                'X-CSRF-TOKEN': $('input[name=__RequestVerificationToken]').val()
+            },
+            beforeSend: function (jqXHR, settings) {
+
+            },
+            success: function (data, textStatus, jqXHR) {
+
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+
+            },
+            complete: function (jqXHR, textStatus) {
+            }
+        });
+
+    });
+</script>

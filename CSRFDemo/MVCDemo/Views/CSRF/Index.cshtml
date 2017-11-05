@@ -1,0 +1,22 @@
+﻿@{
+    ViewBag.Title = "Index";
+}
+<script src="http://libs.baidu.com/jquery/1.9.1/jquery.min.js"></script>
+<h2>Index</h2>
+
+<p>
+    Html.AntiForgeryToken()防范CSRF攻击
+</p>
+
+@using (Html.BeginForm("Post", "CSRF", FormMethod.Post))
+{
+
+    <div>
+        用户名：<input type="text" name="username" /><br />
+        金额：<input type="text" name="money" /><br />
+        <input type="submit" value="转账" />
+
+    </div>
+    @Html.AntiForgeryToken();
+}
+

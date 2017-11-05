@@ -1,0 +1,17 @@
+﻿@{
+    ViewBag.Title = "BIndex";
+}
+
+<p>
+    没有token会提交失败
+</p>
+@using (Html.BeginForm("Post", "CSRF", FormMethod.Post))
+{
+    <div>
+        用户名：<input type="text" name="username" /><br />
+        金额：<input type="text" name="money" /><br />
+        <input type="submit" value="转账" />
+
+    </div>
+}
+
